@@ -24,6 +24,13 @@ ChatThrough is a real-time chat application built using Node.js, Express, Socket
 - PostgreSQL for storing relational data like user information.
 - Astro DB (Cassandra) for storing chat messages.
 - Responsive UI for seamless experience across devices.
+- Automatic message rendering when reached the end for seamless user experience.
+
+## Demo
+<video width="640" height="360" controls>
+  <source src="public/screenshots/ChatThrough.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 ## Screenshots
 ![Login](public/screenshots/login.png)
