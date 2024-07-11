@@ -27,10 +27,9 @@ ChatThrough is a real-time chat application built using Node.js, Express, Socket
 - Automatic message rendering when reached the end for seamless user experience.
 
 ## Demo
-<video width="640" height="360" controls>
-  <source src="public/screenshots/ChatThrough.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+![Demo](public/screenshots/ChatThrough.gif)
+
+For a high-quality demo, visit [here](https://github.com/VaishnavSherla/ChatThrough/raw/main/public/screenshots/ChatThrough.mp4).
 
 ## Screenshots
 ![Login](public/screenshots/login.png)
