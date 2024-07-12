@@ -59,13 +59,134 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
 });
 
+
 app.get('/getUsers', async (req, res) => {
+    const { user } = req.body;
+
+    // Extract JWT token from cookies
+    const token = req.headers.cookie?.split('; ')
+        .find(cookie => cookie.startsWith('jwt='))
+        ?.split('=')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Authentication error: Token not provided' });
+    }
+
     try {
-        const result = await pgClient.query('SELECT username FROM users');
-        res.send(result.rows);
+        jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+            if (err) {
+                console.error('JWT verification error:', err);
+                return res.status(401).json({ error: 'Authentication error: Invalid token' });
+            }
+
+            const authenticatedUser = decoded.username;
+
+            // Connect to PostgreSQL client
+            const client = await pgClient.connect();
+
+            try {
+                // Query to fetch users who are contacts of the authenticated user
+                const query = `
+                    SELECT user2
+                    FROM contacts
+                    WHERE user1 = $1
+                `;
+                const result = await client.query(query, [authenticatedUser]);
+
+                // Release the client after query execution
+                client.release();
+
+                // Send the fetched users in the response
+                res.status(200).json(result.rows);
+            } catch (error) {
+                console.error('Error executing query:', error);
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
+        });
     } catch (error) {
-        console.error('Error fetching users:', error);
-        res.status(500).send({ error: 'Internal Server Error' });
+        console.error('Error verifying JWT:', error);
+        res.status(401).json({ error: 'Authentication error: Invalid token format' });
+    }
+});
+
+
+app.get('/getUserStatus/:username', async (req, res) => {
+    try {
+        const { username } = req.params;
+        const client = await pgClient.connect();
+        const query = 'SELECT last_timestamp FROM heartbeats WHERE username = $1';
+        const values = [username];
+        const result = await client.query(query, values);
+        client.release();
+        if (result.rows.length > 0) {
+            res.status(200).json({ last_timestamp: result.rows[0].last_timestamp });
+        } else {
+            res.status(404).json({ error: 'User not found' });
+        }
+    } catch (error) {
+        console.error('Error fetching user status:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+app.post('/addContact', async (req, res) => {
+    const { user } = req.body;
+    
+    const token = req.headers.cookie?.split('; ')
+        .find(cookie => cookie.startsWith('jwt='))
+        ?.split('=')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Authentication error: Token not provided' });
+    }
+
+    try {
+        jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+            if (err) {
+                console.error('JWT verification error:', err);
+                return res.status(401).json({ error: 'Authentication error: Invalid token' });
+            }
+
+            const user1 = decoded.username;
+
+            // Check if user exists
+            const checkUserQuery = `
+                SELECT *
+                FROM users
+                WHERE (username = $1)
+            `
+
+            let result;
+            result = await pgClient.query(checkUserQuery, [user]);
+
+            if (result.rows.length != 1) {
+                return res.status(400).json({ error: 'User does not exist!' });
+            }
+
+
+            // Check if the contact already exists in the contacts table
+            const checkContactQuery = `
+                SELECT *
+                FROM contacts
+                WHERE (user1 = $1 AND user2 = $2) OR (user1 = $2 AND user2 = $1)
+            `;
+            const checkContactValues = [user1, user];
+            result = await pgClient.query(checkContactQuery, checkContactValues);
+
+            if (result.rows.length > 0) {
+                return res.status(400).json({ error: 'Contact already exists.' });
+            }            
+
+            const insertContactQuery = 'INSERT INTO contacts (user1, user2) VALUES ($1, $2), ($2, $1)';
+            const insertContactValues = [user1, user];
+            await pgClient.query(insertContactQuery, insertContactValues);
+
+            res.status(200).json({ message: 'Contact added successfully.' });
+        });
+    } catch (error) {
+        console.error('Error adding contact:', error);
+        res.status(500).json({ error: 'Internal server error.' });
     }
 });
 
@@ -94,6 +215,22 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
+
+    socket.on('heartbeat', async() => {
+        const user = socket.user.username;
+        const client = await pgClient.connect();
+        const updateQuery = `
+                INSERT INTO heartbeats (username, last_timestamp)
+                VALUES ($1, CURRENT_TIMESTAMP)
+                ON CONFLICT (username)
+                DO UPDATE SET last_timestamp = EXCLUDED.last_timestamp
+            `;
+        const values = [user];
+        await client.query(updateQuery, values);
+        
+        client.release();
+
+    });
 
     socket.on('fetch-messages', async ({ to, lastFetchedTimestamp = null }) => {
         try {
@@ -125,12 +262,12 @@ io.on('connection', (socket) => {
                 `;
                 params = [user1, user2, fetchSize];
             }
-    
+
             const result = await cassandraClient.execute(query, params, options);
             let messages = result.rows;
 
             if (messages.length == 11) {
-                messages.pop(); // Remove the last message
+                messages.pop();
                 const tenthItemTimestamp = messages[9].timestamp;
                 lastFetchedTimestamp = tenthItemTimestamp;
             } else {
@@ -148,7 +285,6 @@ io.on('connection', (socket) => {
         }
     });
     
-    // Send message event
     socket.on('send-message', async ({ to, text }) => {
         try {
             const from = socket.user.username;
@@ -188,7 +324,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Disconnect event
     socket.on('disconnect', () => {
         const userId = Object.keys(users).find(key => users[key] === socket.id);
         if (userId) {

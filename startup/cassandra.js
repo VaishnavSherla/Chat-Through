@@ -1,13 +1,22 @@
-// requirements/cassandra.js
 const cassandra = require('cassandra-driver');
 require('dotenv').config();
 
-// Configure Cassandra client
 const cloud = { secureConnectBundle: process.env['ASTRA_DB_SECURE_BUNDLE_PATH'] };
 const authProvider = new cassandra.auth.PlainTextAuthProvider('token', process.env['ASTRA_DB_APPLICATION_TOKEN']);
 const keyspace = process.env['ASTRA_DB_KEYSPACE'];
 
-const cassandraClient = new cassandra.Client({ cloud, authProvider, keyspace });
+const cassandraClient = new cassandra.Client({
+  cloud,
+  authProvider,
+  keyspace,
+  pooling: {
+    coreConnectionsPerHost: {
+      [cassandra.types.distance.local]: 4,  // Number of connections per host for local data center
+      [cassandra.types.distance.remote]: 2  // Number of connections per host for remote data center
+    },
+    maxRequestsPerConnection: 1024,
+  }
+});
 
 cassandraClient.connect()
   .then(() => console.log('Connected to Astra DB'))

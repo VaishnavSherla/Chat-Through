@@ -177,8 +177,51 @@
         <div class="tab-pane fade show active" id="pills-chat" role="tabpanel" aria-labelledby="pills-chat-tab">
           <!-- Start chats content -->
           <div>
-            <div class="px-4 pt-4">
+            <!-- <div class="px-4 pt-4"> -->
+              <div class="p-4">
+                <div class="user-chat-nav float-end">
+                  <div data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add User">
+                    <!-- Button trigger modal -->
+                    <button type="button" class="btn btn-link text-decoration-none text-muted font-size-18 py-0"
+                      data-bs-toggle="modal" data-bs-target="#addContact-exampleModal">
+                      <i class="ri-user-add-line"></i>
+                    </button>
+                  </div>
+                </div>
+                <!-- <h4 class="mb-4">Contacts</h4> -->
               <h4 class="mb-4">Chats</h4>
+
+               <!-- Start Add contact Modal -->
+               <div class="modal fade" id="addContact-exampleModal" tabindex="-1" role="dialog"
+               aria-labelledby="addContact-exampleModalLabel" aria-hidden="true">
+               <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                 <div class="modal-content">
+                   <form class="contact_form">
+                     <div class="modal-header">
+                       <h5 class="modal-title font-size-16" id="addContact-exampleModalLabel">Add Contact</h5>
+                       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                         id="hide_modal">
+                       </button>
+                     </div>
+                     <div class="modal-body p-4">
+                       <div class="mb-3">
+                         <label for="addcontactemail-input" class="form-label">Username</label>
+                         <input type="text" name="username" class="form-control contact_form__input" id="username"
+                           placeholder="Enter Username">
+                       </div>
+                     </div>
+                     <div class="alert alert-danger d-none" id="error_message"></div>
+                     <div class="modal-footer">
+                       <button type="button" class="btn btn-link" data-bs-dismiss="modal">Close</button>
+                       <button type="submit" class="btn btn-primary" id="add_contact">Chat with user</button>
+                     </div>
+                   </form>
+                 </div>
+               </div>
+             </div>
+             <!-- End Add contact Modal -->
+
+              
               <div class="search-box chat-search-box">
                 <div class="input-group mb-3 rounded-3">
                   <span class="input-group-text text-muted bg-light pe-1 ps-3" id="basic-addon1">
@@ -220,7 +263,7 @@
     <!-- end chat-leftsidebar -->
 
     <!-- Start User chat -->
-    <div class="user-chat w-100 overflow-hidden">
+    <div id="singlechatuser" class="user-chat w-100 overflow-hidden">
       <div class="d-lg-flex">
         <!-- start chat conversation section -->
         <div class="w-100 overflow-hidden position-relative user-chats1">
@@ -236,8 +279,8 @@
                   </div>
                   <p class="text-muted mb-0" id="recipientUser">Username</p>
                   <div class="flex-grow-1 overflow-hidden">
-                    <h5 class="font-size-16 mb-0 text-truncate"><a href="javascript:void(0);" class="text-reset user-profile-show"></a> <i
-                        class="ri-record-circle-fill font-size-10 text-success d-inline-block ms-1"></i>
+                    <h5 class="font-size-16 mb-0 text-truncate"><a href="javascript:void(0);" class="text-reset user-profile-show"></a> 
+                      <i id="recipientUserStatus" class="ri-record-circle-fill font-size-10 d-inline-block ms-1 user_status"> </i>
                     </h5>
                   </div>
                 </div>

@@ -41,8 +41,8 @@ router.post('/register', asyncMiddleware(async (req, res, next) => {
             message: 'Please provide username and password'
         });
     }
-    
-    const { rows } = await pgClient.query('SELECT * FROM users WHERE username = $1', [username]);
+    const client = await pgClient.connect();
+    const { rows } = await client.query('SELECT * FROM users WHERE username = $1', [username]);
     if (rows.length > 0) {
         return res.status(400).json({
             status: 'fail',
@@ -52,8 +52,9 @@ router.post('/register', asyncMiddleware(async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    await pgClient.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
-
+    await client.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
+    await client.query('INSERT INTO contacts (user1, user2) VALUES ($1, $2)', [username, username]);
+    client.release();
     return createSendToken(username, 201, res, 'Registered successfully');
 }));
 
@@ -66,8 +67,8 @@ router.post('/login', asyncMiddleware(async (req, res, next) => {
             message: 'Please provide username and password'
         });
     }
-
-    const { rows } = await pgClient.query('SELECT * FROM users WHERE username = $1', [username]);
+    const client = await pgClient.connect();
+    const { rows } = await client.query('SELECT * FROM users WHERE username = $1', [username]);
     if (rows.length === 0) {
         return res.status(401).json({
             status: 'fail',
@@ -84,7 +85,7 @@ router.post('/login', asyncMiddleware(async (req, res, next) => {
             message: 'Invalid username or password'
         });
     }
-    
+    client.release();
     return createSendToken(username, 200, res, 'Logged in successfully');
 }));
 
